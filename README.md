@@ -41,4 +41,8 @@ Built with Jetpack Compose, ExpenseMate follows a sleek **Black & Gold** theme f
 ---
 
 ## 🔗 Navigation Flow
+![image](https://github.com/user-attachments/assets/73148077-762f-4265-87b2-b9c84ca3d135)
+
+![image](https://github.com/user-attachments/assets/12a0ca50-9a6f-49fe-81e8-a23ae4f1ee26)
+
 
