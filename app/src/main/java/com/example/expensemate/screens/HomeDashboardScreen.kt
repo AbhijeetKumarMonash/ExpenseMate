@@ -21,11 +21,13 @@ import androidx.navigation.NavHostController
 import com.example.expensemate.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import com.google.firebase.auth.FirebaseAuth
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeDashboardScreen(navController: NavHostController) {
+    val userName = FirebaseAuth.getInstance().currentUser?.displayName ?: "User"
     val recentTransactions = listOf(
         "Groceries - \$25",
         "Uber Ride - \$15",
@@ -72,7 +74,7 @@ fun HomeDashboardScreen(navController: NavHostController) {
         ) {
             item {
                 Text(
-                    text = "Welcome back, Abhijeet!",
+                    text = "👋 Welcome, $userName!",
                     color = Color.White,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,

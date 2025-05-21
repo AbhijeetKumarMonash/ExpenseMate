@@ -1,16 +1,20 @@
 package com.example.expensemate.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,6 +22,9 @@ fun SignupScreen(navController: NavHostController) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
 
     Scaffold(
         topBar = {
@@ -30,7 +37,6 @@ fun SignupScreen(navController: NavHostController) {
                         color = Color(0xFFFFD700),
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center
-
                     )
                 },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
@@ -103,7 +109,44 @@ fun SignupScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = { navController.navigate("login") }, // after signup go back to login
+                onClick = {
+                    if (email.isNotEmpty() && password.isNotEmpty() && name.isNotEmpty()) {
+                        auth.createUserWithEmailAndPassword(email, password)
+                            .addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    // 🟡 Update display name
+                                    val user = auth.currentUser
+                                    val profileUpdates = UserProfileChangeRequest.Builder()
+                                        .setDisplayName(name)
+                                        .build()
+
+                                    user?.updateProfile(profileUpdates)
+
+                                    Toast.makeText(
+                                        context,
+                                        "✅ Account created successfully!",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+
+                                    navController.navigate("login") {
+                                        popUpTo("signup") { inclusive = true }
+                                    }
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "❌ Failed: ${task.exception?.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Please fill in all fields",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFFD700),
