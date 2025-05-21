@@ -1,5 +1,6 @@
 package com.example.expensemate.screens
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -19,10 +21,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.expensemate.R
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(navController: NavHostController) {
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -53,7 +60,7 @@ fun ProfileScreen(navController: NavHostController) {
         ) {
             // Profile Image
             Image(
-                painter = painterResource(id = R.drawable.profileicon), // Add your profilepic.png in drawable
+                painter = painterResource(id = R.drawable.profileicon),
                 contentDescription = "Profile Picture",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -81,7 +88,7 @@ fun ProfileScreen(navController: NavHostController) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Abhijeet Kumar",
+                        text = FirebaseAuth.getInstance().currentUser?.displayName ?: "User",
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium
@@ -95,7 +102,7 @@ fun ProfileScreen(navController: NavHostController) {
                         modifier = Modifier.padding(top = 16.dp)
                     )
                     Text(
-                        text = "abhijeet@example.com",
+                        text = FirebaseAuth.getInstance().currentUser?.email ?: "example@email.com",
                         color = Color.White,
                         fontSize = 18.sp
                     )
@@ -117,7 +124,12 @@ fun ProfileScreen(navController: NavHostController) {
 
             // Sign-Out Button
             Button(
-                onClick = { /* Dummy - no real action */ },
+                onClick = {
+                    signOut(context)
+                    navController.navigate("login") {
+                        popUpTo("profile") { inclusive = true }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFFD700),
@@ -140,4 +152,16 @@ fun ProfileScreen(navController: NavHostController) {
             )
         }
     }
+}
+
+fun signOut(context: Context) {
+    // Firebase sign-out
+    FirebaseAuth.getInstance().signOut()
+
+    // Google sign-out
+    val googleSignInClient = GoogleSignIn.getClient(
+        context,
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
+    )
+    googleSignInClient.signOut()
 }

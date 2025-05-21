@@ -1,5 +1,8 @@
 package com.example.expensemate.screens
 
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -16,13 +20,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.expensemate.R
-
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavHostController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+            auth.signInWithCredential(credential)
+                .addOnCompleteListener { authTask ->
+                    if (authTask.isSuccessful) {
+                        Log.d("Login", "✅ Google sign-in successful!")
+                        navController.navigate("home")
+                    } else {
+                        Log.e("Login", "❌ Firebase sign-in failed", authTask.exception)
+                    }
+                }
+        } catch (e: ApiException) {
+            Log.e("Login", "❌ Google sign-in failed", e)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -34,7 +66,7 @@ fun LoginScreen(navController: NavHostController) {
                         fontSize = 22.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFFFFD700) // Gold
+                        color = Color(0xFFFFD700)
                     )
                 },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
@@ -42,7 +74,7 @@ fun LoginScreen(navController: NavHostController) {
                 )
             )
         },
-        containerColor = Color.Black // whole background black
+        containerColor = Color.Black
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -52,9 +84,8 @@ fun LoginScreen(navController: NavHostController) {
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // App Logo
             Image(
-                painter = painterResource(id = R.drawable.expensemate), // Logo must be named "expensemate.png" inside res/drawable
+                painter = painterResource(id = R.drawable.expensemate),
                 contentDescription = "ExpenseMate Logo",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
@@ -64,7 +95,6 @@ fun LoginScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Email Field
             TextField(
                 value = email,
                 onValueChange = { email = it },
@@ -88,7 +118,6 @@ fun LoginScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password Field
             TextField(
                 value = password,
                 onValueChange = { password = it },
@@ -112,7 +141,6 @@ fun LoginScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Login Button
             Button(
                 onClick = { navController.navigate("home") },
                 modifier = Modifier.fillMaxWidth(),
@@ -126,7 +154,27 @@ fun LoginScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Forgot Password and Sign Up
+            // ✅ Google Sign-In Button
+            Button(
+                onClick = {
+                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                        .requestIdToken("518163454431-iamg45vssnvkedh1an9fshmpiimnsm56.apps.googleusercontent.com") // 🔁 Replace this
+                        .requestEmail()
+                        .build()
+                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                    launcher.launch(googleSignInClient.signInIntent)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color.Black
+                )
+            ) {
+                Text("Sign in with Google")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -135,7 +183,6 @@ fun LoginScreen(navController: NavHostController) {
                     text = "Forgot Password?",
                     color = Color(0xFFFFD700),
                     fontSize = 18.sp,
-
                 )
                 Text(
                     text = "Sign Up",
@@ -143,9 +190,7 @@ fun LoginScreen(navController: NavHostController) {
                     fontSize = 14.sp,
                     modifier = Modifier.clickable { navController.navigate("signup") }
                 )
-
             }
-
         }
     }
 }
