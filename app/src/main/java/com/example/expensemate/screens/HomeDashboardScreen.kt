@@ -22,11 +22,13 @@ import com.example.expensemate.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import com.google.firebase.auth.FirebaseAuth
+import com.example.expensemate.viewmodel.ExpenseViewModel
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeDashboardScreen(navController: NavHostController) {
+fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
     val userName = FirebaseAuth.getInstance().currentUser?.displayName ?: "User"
     val recentTransactions = listOf(
         "Groceries - \$25",

@@ -22,10 +22,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import java.util.*
+import com.example.expensemate.viewmodel.ExpenseViewModel
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddExpenseScreen(navController: NavHostController) {
+fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
     var amount by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Select Category") }
     var selectedDate by remember { mutableStateOf("") }

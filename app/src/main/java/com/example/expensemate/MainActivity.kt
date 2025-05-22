@@ -9,21 +9,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModelProvider
 import com.example.expensemate.navigation.ExpenseMateApp
 import com.example.expensemate.ui.theme.ExpenseMateTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.expensemate.viewmodel.ExpenseViewModel
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        val viewModel = ViewModelProvider(
+            this,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+        )[ExpenseViewModel::class.java]
+
         setContent {
             ExpenseMateTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    ExpenseMateApp()
-                }
+                ExpenseMateApp(viewModel)
             }
         }
     }
