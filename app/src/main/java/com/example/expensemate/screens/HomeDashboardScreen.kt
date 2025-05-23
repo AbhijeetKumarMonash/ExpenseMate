@@ -28,8 +28,8 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeDashboardScreen(navController: NavHostController) {
-    val viewModel: ExpenseViewModel = viewModel()
+fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
+
     val expenses by viewModel.expenses.collectAsState()
     val todayDate = SimpleDateFormat("d/M/yyyy", Locale.getDefault()).format(Date())
     val todayTotal = expenses.filter { it.date == todayDate }.sumOf { it.amount }

@@ -29,8 +29,8 @@ fun ExpenseMateApp(viewModel: ExpenseViewModel) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("login") { LoginScreen(navController) }
-            composable("home") { HomeDashboardScreen(navController) }
-            composable("add_expense") { AddExpenseScreen(navController) }
+            composable("home") { HomeDashboardScreen(navController, viewModel) }
+            composable("add_expense") { AddExpenseScreen(navController, viewModel) }
             composable("report") { ReportScreen(navController) }
             composable("chatbot") { ChatbotScreen(navController) }
             composable("signup") { SignupScreen(navController) }
