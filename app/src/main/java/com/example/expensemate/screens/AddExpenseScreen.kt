@@ -271,7 +271,7 @@ fun AddExpenseScreen(navController: NavHostController) {
                         selectedCategory = "Select Category"
                         otherCategoryName = ""
                         selectedDate = ""
-                        navController.popBackStack()
+//                        navController.popBackStack()
                     }
                 }
                 ,
@@ -287,6 +287,7 @@ fun AddExpenseScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Expense display
             if (expenses.isNotEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -301,15 +302,23 @@ fun AddExpenseScreen(navController: NavHostController) {
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        val shownExpenses = if (showAllExpenses) expenses else listOf(expenses.last())
+                        // 🔥 FIX: Always compute dynamically so recomposition reflects actual updates
+                        val sortedExpenses = expenses.sortedByDescending { it.id }
+                        val shownExpenses = if (showAllExpenses || sortedExpenses.size <= 1) {
+                            sortedExpenses
+                        } else {
+                            sortedExpenses.take(1)
+                        }
+
 
                         shownExpenses.forEach { exp ->
-                            Column(modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .background(Color(0xFF222222))
-                                .padding(12.dp)) {
-
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .background(Color(0xFF222222))
+                                    .padding(12.dp)
+                            ) {
                                 Text(
                                     text = "Amount: \$${exp.amount} | Category: ${exp.category} | Date: ${exp.date}",
                                     color = Color.White
@@ -345,20 +354,22 @@ fun AddExpenseScreen(navController: NavHostController) {
                             }
                         }
 
-
+                        // 🔁 Toggle Button
                         Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = if (showAllExpenses) "Show Less ▲" else "Show All ▼",
-                            color = Color.Cyan,
-                            fontSize = 14.sp,
-                            modifier = Modifier
-                                .align(Alignment.End)
-                                .clickable { showAllExpenses = !showAllExpenses }
-                        )
+                        if (sortedExpenses.size > 1) {
+                            Text(
+                                text = if (showAllExpenses) "Show Less ▲" else "Show All ▼",
+                                color = Color.Cyan,
+                                fontSize = 14.sp,
+                                modifier = Modifier
+                                    .align(Alignment.End)
+                                    .clickable { showAllExpenses = !showAllExpenses }
+                            )
+                        }
                     }
                 }
             }
+
 
 
         }
