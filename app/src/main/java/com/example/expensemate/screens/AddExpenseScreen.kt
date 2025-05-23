@@ -33,12 +33,19 @@ import com.example.expensemate.viewmodel.ExpenseViewModel
 fun AddExpenseScreen(navController: NavHostController) {
     var amount by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Select Category") }
+    var otherCategoryName by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     var addToCalendar by remember { mutableStateOf(false) }
     var billImageUri by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
     val viewModel: ExpenseViewModel = viewModel()
+    val expenses by viewModel.expenses.collectAsState()
+    var showAllExpenses by remember { mutableStateOf(false) }
+    var editingExpenseId by remember { mutableStateOf<Int?>(null) }
+
+
+
 
 
     val categories = listOf("Food", "Transport", "Bills", "Shopping", "Others")
@@ -139,6 +146,25 @@ fun AddExpenseScreen(navController: NavHostController) {
                     }
                 }
             }
+            if (selectedCategory == "Others") {
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = otherCategoryName,
+                    onValueChange = { otherCategoryName = it },
+                    label = { Text("Enter custom category", color = Color(0xFFFFD700)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.DarkGray,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedIndicatorColor = Color(0xFFFFD700),
+                        unfocusedIndicatorColor = Color.Gray,
+                        focusedLabelColor = Color(0xFFFFD700),
+                        unfocusedLabelColor = Color(0xFFFFD700)
+                    )
+                )
+            }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -223,17 +249,32 @@ fun AddExpenseScreen(navController: NavHostController) {
 
             Button(
                 onClick = {
-                    if (amount.isNotEmpty() && selectedCategory != "Select Category" && selectedDate.isNotEmpty()) {
-                        viewModel.addExpense(
-                            Expense(
-                                amount = amount.toDouble(),
-                                category = selectedCategory,
-                                date = selectedDate
-                            )
+                    val category = if (selectedCategory == "Others") otherCategoryName else selectedCategory
+
+                    if (amount.isNotEmpty() && category.isNotEmpty() && selectedDate.isNotEmpty()) {
+                        val expense = Expense(
+                            id = editingExpenseId ?: 0, // Use 0 for insert (Room auto-generates)
+                            amount = amount.toDouble(),
+                            category = category,
+                            date = selectedDate
                         )
-                        navController.popBackStack() // Navigate back to Home
+
+                        if (editingExpenseId != null) {
+                            viewModel.updateExpense(expense)
+                            editingExpenseId = null
+                        } else {
+                            viewModel.addExpense(expense)
+                        }
+
+                        // Reset fields
+                        amount = ""
+                        selectedCategory = "Select Category"
+                        otherCategoryName = ""
+                        selectedDate = ""
+                        navController.popBackStack()
                     }
-                },
+                }
+                ,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFFD700),
@@ -246,26 +287,80 @@ fun AddExpenseScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Demo Last Added Expense Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Last Added:",
-                        color = Color(0xFFFFD700),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Amount: \$45 | Category: Food | Date: 15/04/2025",
-                        color = Color.White
-                    )
+            if (expenses.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Your Expenses:",
+                            color = Color(0xFFFFD700),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        val shownExpenses = if (showAllExpenses) expenses else listOf(expenses.last())
+
+                        shownExpenses.forEach { exp ->
+                            Column(modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .background(Color(0xFF222222))
+                                .padding(12.dp)) {
+
+                                Text(
+                                    text = "Amount: \$${exp.amount} | Category: ${exp.category} | Date: ${exp.date}",
+                                    color = Color.White
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row {
+                                    Button(
+                                        onClick = {
+                                            amount = exp.amount.toString()
+                                            selectedCategory = if (exp.category in categories) exp.category else "Others"
+                                            otherCategoryName = if (selectedCategory == "Others") exp.category else ""
+                                            selectedDate = exp.date
+                                            editingExpenseId = exp.id
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                                    ) {
+                                        Text("Edit")
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Button(
+                                        onClick = { viewModel.deleteExpense(exp) },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                                    ) {
+                                        Text("Delete", color = Color.White)
+                                    }
+                                }
+                            }
+                        }
+
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = if (showAllExpenses) "Show Less ▲" else "Show All ▼",
+                            color = Color.Cyan,
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .clickable { showAllExpenses = !showAllExpenses }
+                        )
+                    }
                 }
             }
+
+
         }
     }
 }

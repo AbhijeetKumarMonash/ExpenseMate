@@ -2,6 +2,7 @@ package com.example.expensemate.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,7 +33,19 @@ fun HomeDashboardScreen(navController: NavHostController) {
     val expenses by viewModel.expenses.collectAsState()
     val todayDate = SimpleDateFormat("d/M/yyyy", Locale.getDefault()).format(Date())
     val todayTotal = expenses.filter { it.date == todayDate }.sumOf { it.amount }
-    val recentTransactions = expenses.take(4)
+    var showAllRecent by remember { mutableStateOf(false) }
+    val recentTransactions = if (showAllRecent) expenses else expenses.take(4)
+    val sdf = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
+    val today = sdf.parse(todayDate)
+    val upcomingBills = expenses.filter {
+        try {
+            sdf.parse(it.date)?.after(today) == true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+
 
     Scaffold(
         topBar = {
@@ -115,6 +128,42 @@ fun HomeDashboardScreen(navController: NavHostController) {
                     contentScale = ContentScale.Fit
                 )
             }
+            if (upcomingBills.isNotEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 24.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Upcoming Bill",
+                                fontSize = 20.sp,
+                                color = Color(0xFFFFD700),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+                items(upcomingBills) { bill ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+                    ) {
+                        Text(
+                            text = "${bill.category}: \$${bill.amount} due on ${bill.date}",
+                            fontSize = 16.sp,
+                            color = Color.White,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
+
+
 
             item {
                 Text(
@@ -142,6 +191,18 @@ fun HomeDashboardScreen(navController: NavHostController) {
                         modifier = Modifier.padding(16.dp)
                     )
                 }
+            }
+            item {
+                Text(
+                    text = if (showAllRecent) "Show Less ▲" else "Show All ▼",
+                    color = Color.Cyan,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showAllRecent = !showAllRecent }
+                        .padding(8.dp),
+                    textAlign = TextAlign.Center
+                )
             }
 
             item {

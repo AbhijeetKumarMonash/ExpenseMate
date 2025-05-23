@@ -22,4 +22,16 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             dao.insertExpense(expense)
         }
     }
+    fun deleteExpense(expense: Expense) {
+        viewModelScope.launch {
+            dao.deleteExpense(expense)
+        }
+    }
+    fun updateExpense(expense: Expense) {
+        viewModelScope.launch {
+            dao.updateExpense(expense)
+        }
+    }
+
+
 }
