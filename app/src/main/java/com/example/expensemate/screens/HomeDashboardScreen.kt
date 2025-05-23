@@ -2,12 +2,13 @@ package com.example.expensemate.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,25 +18,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.expensemate.R
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import com.google.firebase.auth.FirebaseAuth
 import com.example.expensemate.viewmodel.ExpenseViewModel
-
-
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
-    val userName = FirebaseAuth.getInstance().currentUser?.displayName ?: "User"
-    val recentTransactions = listOf(
-        "Groceries - \$25",
-        "Uber Ride - \$15",
-        "Coffee - \$5",
-        "Netflix Subscription - \$20"
-    )
+fun HomeDashboardScreen(navController: NavHostController) {
+    val viewModel: ExpenseViewModel = viewModel()
+    val expenses by viewModel.expenses.collectAsState()
+    val todayDate = SimpleDateFormat("d/M/yyyy", Locale.getDefault()).format(Date())
+    val todayTotal = expenses.filter { it.date == todayDate }.sumOf { it.amount }
+    val recentTransactions = expenses.take(4)
 
     Scaffold(
         topBar = {
@@ -63,7 +60,6 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
                 )
             )
         },
-
         containerColor = Color.Black
     ) { innerPadding ->
         LazyColumn(
@@ -76,7 +72,7 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
         ) {
             item {
                 Text(
-                    text = "👋 Welcome, $userName!",
+                    text = "👋 Welcome!",
                     color = Color.White,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
@@ -93,7 +89,7 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Today's Expenses: \$45.00",
+                            text = "Today's Expenses: \$${"%.2f".format(todayTotal)}",
                             fontSize = 20.sp,
                             color = Color(0xFFFFD700),
                             fontWeight = FontWeight.Bold
@@ -121,32 +117,6 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
             }
 
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Upcoming Bill",
-                            fontSize = 20.sp,
-                            color = Color(0xFFFFD700),
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Electricity Bill: \$120 due on 20th April",
-                            fontSize = 16.sp,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-
-
-
-            item {
                 Text(
                     text = "Recent Transactions",
                     color = Color(0xFFFFD700),
@@ -158,7 +128,7 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
                 )
             }
 
-            items(recentTransactions) { transaction ->
+            items(recentTransactions) { expense ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -166,7 +136,7 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
                     colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
                 ) {
                     Text(
-                        text = transaction,
+                        text = "${expense.category} - \$${expense.amount} (${expense.date})",
                         color = Color.White,
                         fontSize = 16.sp,
                         modifier = Modifier.padding(16.dp)

@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,14 +21,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.expensemate.data.Expense
 import java.util.*
 import com.example.expensemate.viewmodel.ExpenseViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
+fun AddExpenseScreen(navController: NavHostController) {
     var amount by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Select Category") }
     var selectedDate by remember { mutableStateOf("") }
@@ -35,6 +38,8 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
     var addToCalendar by remember { mutableStateOf(false) }
     var billImageUri by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
+    val viewModel: ExpenseViewModel = viewModel()
+
 
     val categories = listOf("Food", "Transport", "Bills", "Shopping", "Others")
 
@@ -100,11 +105,14 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
             ) {
                 TextField(
                     value = selectedCategory,
-                    onValueChange = {},
+                    onValueChange = {}, // no-op
                     label = { Text("Category", color = Color(0xFFFFD700)) },
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor() // <--- this line is important!
+                        .clickable { expanded = true }, // open dropdown on click
                     colors = TextFieldDefaults.textFieldColors(
                         containerColor = Color.DarkGray,
                         focusedTextColor = Color.White,
@@ -115,6 +123,7 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
                         unfocusedLabelColor = Color(0xFFFFD700)
                     )
                 )
+
                 ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
@@ -211,9 +220,20 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Save Button
+
             Button(
-                onClick = { /* Save action */ },
+                onClick = {
+                    if (amount.isNotEmpty() && selectedCategory != "Select Category" && selectedDate.isNotEmpty()) {
+                        viewModel.addExpense(
+                            Expense(
+                                amount = amount.toDouble(),
+                                category = selectedCategory,
+                                date = selectedDate
+                            )
+                        )
+                        navController.popBackStack() // Navigate back to Home
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFFD700),
@@ -222,6 +242,7 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
             ) {
                 Text("Save Expense", fontWeight = FontWeight.Bold)
             }
+
 
             Spacer(modifier = Modifier.height(32.dp))
 

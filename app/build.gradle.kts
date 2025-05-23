@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    id("kotlin-kapt")
 }
 
 android {
@@ -54,8 +55,8 @@ dependencies {
     implementation(libs.vision.internal.vkp)
     implementation(libs.androidx.datastore.core.android)
     implementation(libs.firebase.auth.ktx)
-    implementation("androidx.room:room-common-jvm:2.7.1")
-    implementation("androidx.room:room-runtime-android:2.7.1")
+//    implementation("androidx.room:room-common-jvm:2.7.1")
+//    implementation("androidx.room:room-runtime-android:2.7.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -63,6 +64,11 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    // Room dependencies
+    implementation ("androidx.room:room-runtime:2.6.1")
+    kapt ("androidx.room:room-compiler:2.6.1")
+    implementation ("androidx.room:room-ktx:2.6.1")
+
 
 //    Firebase Auth and Google Sign-In
     implementation("com.google.firebase:firebase-auth-ktx")
