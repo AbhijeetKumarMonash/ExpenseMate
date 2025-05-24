@@ -1,6 +1,7 @@
 package com.example.expensemate.screens
 
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -142,7 +143,31 @@ fun LoginScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = { navController.navigate("home") },
+                onClick = {
+                    if (email.isNotEmpty() && password.isNotEmpty()) {
+                        auth.signInWithEmailAndPassword(email, password)
+                            .addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    navController.navigate("home") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                } else {
+                                    Log.e("Login", "❌ Login failed", task.exception)
+                                    Toast.makeText(
+                                        context,
+                                        "Login failed: ${task.exception?.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Please enter email and password",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFFD700),
@@ -151,6 +176,7 @@ fun LoginScreen(navController: NavHostController) {
             ) {
                 Text("Login", fontWeight = FontWeight.Bold)
             }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 

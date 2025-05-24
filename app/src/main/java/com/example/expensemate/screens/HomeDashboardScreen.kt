@@ -23,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.expensemate.R
 import com.example.expensemate.viewmodel.ExpenseViewModel
+import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,13 +32,21 @@ import java.util.*
 fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
 
     val expenses by viewModel.expenses.collectAsState()
+    val userId = FirebaseAuth.getInstance().currentUser?.uid
+    val userExpenses = expenses.filter { it.userId == userId }
+
+    val userName = FirebaseAuth.getInstance().currentUser?.displayName ?: "User"
     val todayDate = SimpleDateFormat("d/M/yyyy", Locale.getDefault()).format(Date())
-    val todayTotal = expenses.filter { it.date == todayDate }.sumOf { it.amount }
+    val todayTotal = userExpenses.filter { it.date == todayDate }.sumOf { it.amount }
     var showAllRecent by remember { mutableStateOf(false) }
-    val recentTransactions = if (showAllRecent) expenses else expenses.take(4)
+    val recentTransactions = if (showAllRecent) userExpenses else userExpenses.take(4)
     val sdf = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
+
+
+
+
     val today = sdf.parse(todayDate)
-    val upcomingBills = expenses.filter {
+    val upcomingBills = userExpenses.filter {
         try {
             sdf.parse(it.date)?.after(today) == true
         } catch (e: Exception) {
@@ -85,7 +94,7 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
         ) {
             item {
                 Text(
-                    text = "👋 Welcome!",
+                    text = "👋 Welcome, $userName!",
                     color = Color.White,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,

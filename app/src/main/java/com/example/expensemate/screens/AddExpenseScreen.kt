@@ -31,6 +31,8 @@ import androidx.navigation.NavHostController
 import com.example.expensemate.data.Expense
 import java.util.*
 import com.example.expensemate.viewmodel.ExpenseViewModel
+import com.google.firebase.auth.FirebaseAuth
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
@@ -42,6 +44,7 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
     var addToCalendar by remember { mutableStateOf(false) }
     var billImageUri by remember { mutableStateOf<Uri?>(null) }
     var editingExpenseId by remember { mutableStateOf<Int?>(null) }
+    val userId = FirebaseAuth.getInstance().currentUser?.uid
 
     val context = LocalContext.current
     val expenses by viewModel.expenses.collectAsState()
@@ -210,7 +213,8 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
                                 id = editingExpenseId ?: 0,
                                 amount = amount.toDouble(),
                                 category = category,
-                                date = selectedDate
+                                date = selectedDate,
+                                userId = userId ?: ""
                             )
                             if (editingExpenseId != null) {
                                 viewModel.updateExpense(expense)

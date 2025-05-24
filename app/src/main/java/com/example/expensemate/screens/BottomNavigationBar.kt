@@ -29,8 +29,7 @@ fun BottomNavigationBar(navController: NavController) {
                 onClick = {
                     if (currentRoute != item.route) {
                         navController.navigate(item.route) {
-                            // Pop up to Home screen to avoid stacking screens infinitely
-                            popUpTo("home") { saveState = true }
+                            popUpTo("home") { inclusive = false }
                             launchSingleTop = true
                             restoreState = true
                         }

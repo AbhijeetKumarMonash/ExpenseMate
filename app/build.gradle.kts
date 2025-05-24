@@ -55,8 +55,6 @@ dependencies {
     implementation(libs.vision.internal.vkp)
     implementation(libs.androidx.datastore.core.android)
     implementation(libs.firebase.auth.ktx)
-//    implementation("androidx.room:room-common-jvm:2.7.1")
-//    implementation("androidx.room:room-runtime-android:2.7.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
