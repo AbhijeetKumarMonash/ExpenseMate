@@ -1,12 +1,13 @@
 package com.example.expensemate.screens
 
-import android.util.Log
+import android.util.Patterns
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,46 +17,24 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.expensemate.R
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavHostController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
-
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-        try {
-            val account = task.getResult(ApiException::class.java)
-            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-            auth.signInWithCredential(credential)
-                .addOnCompleteListener { authTask ->
-                    if (authTask.isSuccessful) {
-                        Log.d("Login", "✅ Google sign-in successful!")
-                        navController.navigate("home")
-                    } else {
-                        Log.e("Login", "❌ Firebase sign-in failed", authTask.exception)
-                    }
-                }
-        } catch (e: ApiException) {
-            Log.e("Login", "❌ Google sign-in failed", e)
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -70,9 +49,7 @@ fun LoginScreen(navController: NavHostController) {
                         color = Color(0xFFFFD700)
                     )
                 },
-                colors = TopAppBarDefaults.mediumTopAppBarColors(
-                    containerColor = Color.Black
-                )
+                colors = TopAppBarDefaults.mediumTopAppBarColors(containerColor = Color.Black)
             )
         },
         containerColor = Color.Black
@@ -96,15 +73,11 @@ fun LoginScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Email field
             TextField(
                 value = email,
                 onValueChange = { email = it },
-                label = {
-                    Text(
-                        text = "Email",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFFFFD700))
-                    )
-                },
+                label = { Text("Email", color = Color(0xFFFFD700)) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.textFieldColors(
                     containerColor = Color.DarkGray,
@@ -119,16 +92,19 @@ fun LoginScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Password field with toggle
             TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = {
-                    Text(
-                        text = "Password",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFFFFD700))
-                    )
-                },
+                label = { Text("Password", color = Color(0xFFFFD700)) },
                 modifier = Modifier.fillMaxWidth(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = image, contentDescription = null, tint = Color.White)
+                    }
+                },
                 colors = TextFieldDefaults.textFieldColors(
                     containerColor = Color.DarkGray,
                     focusedTextColor = Color.White,
@@ -144,77 +120,63 @@ fun LoginScreen(navController: NavHostController) {
 
             Button(
                 onClick = {
-                    if (email.isNotEmpty() && password.isNotEmpty()) {
+                    if (email.isEmpty() || password.isEmpty()) {
+                        Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
+                    } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                        Toast.makeText(context, "Invalid email format", Toast.LENGTH_SHORT).show()
+                    } else if (!password.matches(Regex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#\$%^&*()_+])[A-Za-z\\d!@#\$%^&*()_+]{8,12}$"))) {
+                        Toast.makeText(context, "Password must be 8–12 chars, contain uppercase, lowercase, number & special char", Toast.LENGTH_LONG).show()
+                    } else {
                         auth.signInWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
-                                    navController.navigate("home") {
-                                        popUpTo("login") { inclusive = true }
+                                    if (auth.currentUser?.isEmailVerified == true) {
+                                        navController.navigate("home") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    } else {
+                                        Toast.makeText(context, "Please verify your email before logging in.", Toast.LENGTH_LONG).show()
                                     }
                                 } else {
-                                    Log.e("Login", "❌ Login failed", task.exception)
-                                    Toast.makeText(
-                                        context,
-                                        "Login failed: ${task.exception?.message}",
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                                    Toast.makeText(context, "Login failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                                 }
                             }
-                    } else {
-                        Toast.makeText(
-                            context,
-                            "Please enter email and password",
-                            Toast.LENGTH_SHORT
-                        ).show()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFD700),
-                    contentColor = Color.Black
-                )
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700), contentColor = Color.Black)
             ) {
                 Text("Login", fontWeight = FontWeight.Bold)
             }
 
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ✅ Google Sign-In Button
-            Button(
-                onClick = {
-                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken("518163454431-iamg45vssnvkedh1an9fshmpiimnsm56.apps.googleusercontent.com") // 🔁 Replace this
-                        .requestEmail()
-                        .build()
-                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
-                    launcher.launch(googleSignInClient.signInIntent)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black
-                )
-            ) {
-                Text("Sign in with Google")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     text = "Forgot Password?",
                     color = Color(0xFFFFD700),
-                    fontSize = 18.sp,
+                    fontSize = 14.sp,
+                    modifier = Modifier.clickable {
+                        if (email.isEmpty()) {
+                            Toast.makeText(context, "Enter your email above first", Toast.LENGTH_SHORT).show()
+                        } else {
+                            auth.sendPasswordResetEmail(email)
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Reset link sent to $email", Toast.LENGTH_LONG).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Error: ${it.message}", Toast.LENGTH_LONG).show()
+                                }
+                        }
+                    }
                 )
                 Text(
                     text = "Sign Up",
                     color = Color(0xFFFFD700),
                     fontSize = 14.sp,
-                    modifier = Modifier.clickable { navController.navigate("signup") }
+                    modifier = Modifier.clickable {
+                        navController.navigate("signup")
+                    }
                 )
             }
         }

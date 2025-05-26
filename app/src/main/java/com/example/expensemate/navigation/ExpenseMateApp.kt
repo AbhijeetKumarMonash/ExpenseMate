@@ -18,7 +18,7 @@ fun ExpenseMateApp(viewModel: ExpenseViewModel) {
 
     Scaffold(
         bottomBar = {
-            if (currentRoute != "login") {
+            if (currentRoute != "login" && currentRoute != "signup") {
                 BottomNavigationBar(navController)
             }
         }
