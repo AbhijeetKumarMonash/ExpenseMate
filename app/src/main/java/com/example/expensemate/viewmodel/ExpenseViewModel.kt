@@ -9,6 +9,9 @@ import com.example.expensemate.data.ExpenseDatabase
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
 
 class ExpenseViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -22,6 +25,7 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             val uid = auth.currentUser?.uid
             Log.d("ExpenseViewModel", "Auth state changed. UID: $uid")
             _userId.value = uid
+            syncFromFirestore(uid)
         }
     }
 
@@ -40,22 +44,95 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
     fun addExpense(expense: Expense) {
         viewModelScope.launch {
             _userId.value?.let { uid ->
-                dao.insertExpense(expense.copy(userId = uid))
+                val docRef = Firebase.firestore.collection("expenses").document()
+                val expenseWithIds = expense.copy(userId = uid, firestoreId = docRef.id)
+
+                dao.insertExpense(expenseWithIds)
+
+                docRef.set(expenseWithIds)
+                    .addOnSuccessListener {
+                        Log.d("ExpenseViewModel", "✅ Synced to Firestore with ID ${docRef.id}")
+                    }
+                    .addOnFailureListener {
+                        Log.e("ExpenseViewModel", "❌ Firestore sync failed", it)
+                    }
             }
         }
     }
+
+
 
     fun deleteExpense(expense: Expense) {
         viewModelScope.launch {
             dao.deleteExpense(expense)
+
+            if (expense.firestoreId.isNotEmpty()) {
+                Firebase.firestore.collection("expenses")
+                    .document(expense.firestoreId)
+                    .delete()
+                    .addOnSuccessListener {
+                        Log.d("ExpenseViewModel", "🗑️ Firestore expense deleted")
+                    }
+                    .addOnFailureListener {
+                        Log.e("ExpenseViewModel", "❌ Firestore delete failed", it)
+                    }
+            }
         }
     }
+
+    fun syncFromFirestore(userId: String?) {
+        if (userId.isNullOrEmpty()) return
+
+        Firebase.firestore.collection("expenses")
+            .whereEqualTo("userId", userId)
+            .get()
+            .addOnSuccessListener { result ->
+                Log.d("FirestoreSync", "Fetched ${result.size()} documents")
+                viewModelScope.launch {
+                    result.forEach { doc ->
+                        try {
+                            val remoteExpense = doc.toObject(Expense::class.java)
+                            Log.d("FirestoreSync", "Expense: $remoteExpense")
+                            val existing = dao.getExpenseByFirestoreId(remoteExpense.firestoreId)
+                            if (existing == null) {
+                                dao.insertExpense(remoteExpense.copy(id = 0)) // Room will generate ID
+                            }
+                        } catch (e: Exception) {
+                            Log.e("FirestoreSync", "❌ Failed to parse document", e)
+                        }
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("FirestoreSync", "❌ Error syncing: ${e.message}", e)
+            }
+    }
+
+
+
+
+
 
     fun updateExpense(expense: Expense) {
         viewModelScope.launch {
             _userId.value?.let { uid ->
-                dao.updateExpense(expense.copy(userId = uid))
+                val updated = expense.copy(userId = uid)
+                dao.updateExpense(updated)
+
+                if (updated.firestoreId.isNotEmpty()) {
+                    Firebase.firestore.collection("expenses")
+                        .document(updated.firestoreId)
+                        .set(updated)
+                        .addOnSuccessListener {
+                            Log.d("ExpenseViewModel", "✅ Firestore updated")
+                        }
+                        .addOnFailureListener {
+                            Log.e("ExpenseViewModel", "❌ Firestore update failed", it)
+                        }
+                }
             }
         }
     }
+
+
 }

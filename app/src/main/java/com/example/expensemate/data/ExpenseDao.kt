@@ -17,4 +17,15 @@ interface ExpenseDao {
 
     @Update
     suspend fun updateExpense(expense: Expense)
+
+    @Query("UPDATE expenses SET firestoreId = :fsId WHERE id = :localId")
+    suspend fun updateFirestoreId(localId: Int, fsId: String)
+
+    @Query("SELECT * FROM expenses WHERE firestoreId = :firestoreId LIMIT 1")
+    suspend fun getByFirestoreId(firestoreId: String): Expense?
+
+    @Query("SELECT * FROM expenses WHERE firestoreId = :firestoreId LIMIT 1")
+    suspend fun getExpenseByFirestoreId(firestoreId: String): Expense?
+
+
 }

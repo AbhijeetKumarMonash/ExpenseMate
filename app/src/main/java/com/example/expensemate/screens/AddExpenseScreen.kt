@@ -45,6 +45,8 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
     var billImageUri by remember { mutableStateOf<Uri?>(null) }
     var editingExpenseId by remember { mutableStateOf<Int?>(null) }
     val userId = FirebaseAuth.getInstance().currentUser?.uid
+    var editingFirestoreId by remember { mutableStateOf<String?>(null) }
+
 
     val context = LocalContext.current
     val expenses by viewModel.expenses.collectAsState()
@@ -214,11 +216,13 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
                                 amount = amount.toDouble(),
                                 category = category,
                                 date = selectedDate,
-                                userId = userId ?: ""
+                                userId = userId ?: "",
+                                firestoreId = editingFirestoreId ?: ""
                             )
                             if (editingExpenseId != null) {
                                 viewModel.updateExpense(expense)
                                 editingExpenseId = null
+                                editingFirestoreId = null
                             } else {
                                 viewModel.addExpense(expense)
                             }
@@ -233,9 +237,22 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
                 ) {
                     Text("Save Expense", fontWeight = FontWeight.Bold)
                 }
-
                 Spacer(modifier = Modifier.height(24.dp))
             }
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        viewModel.syncFromFirestore(userId)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF32CD32), contentColor = Color.White)
+                ) {
+                    Text("🔄 Sync from Cloud")
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
 
             item {
                 Text(
@@ -269,6 +286,7 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
                                     otherCategoryName = if (selectedCategory == "Others") exp.category else ""
                                     selectedDate = exp.date
                                     editingExpenseId = exp.id
+                                    editingFirestoreId = exp.firestoreId
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
