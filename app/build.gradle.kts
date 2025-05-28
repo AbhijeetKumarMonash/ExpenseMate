@@ -84,6 +84,14 @@ dependencies {
 // Coroutines
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
 
+// OkHttp for API key interceptor
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation("com.google.ai.client.generativeai:generativeai:0.4.0")
+
+    implementation("com.github.jeziellago:compose-markdown:0.3.2")
+    implementation("io.noties.markwon:core:4.6.2")
+
+    implementation("com.airbnb.android:lottie-compose:6.0.0")
 
 
 }

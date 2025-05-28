@@ -26,6 +26,7 @@ import com.example.expensemate.viewmodel.ExpenseViewModel
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.*
+import com.airbnb.lottie.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +44,7 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
     val sdf = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
 
 
+
     LaunchedEffect(Unit) {
         viewModel.fetchDailyAdvice()
     }
@@ -56,6 +58,9 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
             false
         }
     }
+    var showAllBills by remember { mutableStateOf(false) }
+    val upcomingBillsToShow = if (showAllBills) upcomingBills else upcomingBills.take(2)
+
 
 
 
@@ -121,7 +126,7 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Tip: ${viewModel.dailyAdvice.value}",
+                            text = "Thought of the day : ${viewModel.dailyAdvice.value}",
                             fontSize = 16.sp,
                             color = Color.White
                         )
@@ -131,16 +136,24 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
             }
 
             item {
-                Image(
-                    painter = painterResource(id = R.drawable.savingmoney),
-                    contentDescription = "Savings Illustration",
+                val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.savingmoney))
+                val progress by animateLottieCompositionAsState(
+                    composition,
+                    iterations = LottieConstants.IterateForever
+                )
+
+                LottieAnimation(
+                    composition = composition,
+                    progress = progress,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
-                        .padding(bottom = 24.dp),
-                    contentScale = ContentScale.Fit
+                        .height(300.dp)
+                        .width(400.dp)
+                        .padding(bottom = 24.dp)
                 )
             }
+
+
             if (upcomingBills.isNotEmpty()) {
                 item {
                     Card(
@@ -159,7 +172,7 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
                         }
                     }
                 }
-                items(upcomingBills) { bill ->
+                items(upcomingBillsToShow) { bill ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -174,6 +187,21 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
                         )
                     }
                 }
+                item {
+                    if (upcomingBills.size > 2) {
+                        Text(
+                            text = if (showAllBills) "Show Less ▲" else "Show More ▼",
+                            color = Color.Cyan,
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showAllBills = !showAllBills }
+                                .padding(8.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
             }
 
 

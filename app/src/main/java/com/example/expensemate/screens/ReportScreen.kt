@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,6 +25,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,10 +35,7 @@ fun ReportScreen(
     navController: NavHostController,
     viewModel: ExpenseViewModel = viewModel(LocalContext.current as ComponentActivity)
 ) {
-    // 1) collect expenses
     val expenses = viewModel.expenses.collectAsState().value
-
-    // 2) filter current month
     val currentMonth = Calendar.getInstance().get(Calendar.MONTH)
     val sdf = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
     val monthlyExpenses = expenses.filter {
@@ -44,16 +45,16 @@ fun ReportScreen(
         }.getOrDefault(false)
     }
 
-    // 3) totals
     val total = monthlyExpenses.sumOf { it.amount }
-    val byCategory = monthlyExpenses
-        .groupBy { it.category }
-        .mapValues { entry -> entry.value.sumOf { it.amount } }
-
+    val byCategory = monthlyExpenses.groupBy { it.category }.mapValues { it.value.sumOf { it.amount } }
+    val dailyTrend = monthlyExpenses.groupBy { it.date }.mapValues { it.value.sumOf { it.amount } }
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Expense Report", fontSize = 22.sp, color = Color(0xFFFFD700)) },
+                title = {
+                    Text("Expense Report", fontSize = 22.sp, color = Color(0xFFFFD700))
+                },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(containerColor = Color.Black)
             )
         },
@@ -64,11 +65,11 @@ fun ReportScreen(
                 .padding(inner)
                 .padding(24.dp)
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .background(Color.Black),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 📊 Total
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
@@ -83,7 +84,7 @@ fun ReportScreen(
                 }
             }
 
-            // 🥧 Pie Chart
+            Text("Category Distribution", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -102,9 +103,7 @@ fun ReportScreen(
                         }
                     },
                     update = { chart ->
-                        val entries = byCategory.map { (cat, sum) ->
-                            PieEntry(sum.toFloat(), cat)
-                        }
+                        val entries = byCategory.map { (cat, sum) -> PieEntry(sum.toFloat(), cat) }
                         val set = PieDataSet(entries, "").apply {
                             colors = ColorTemplate.MATERIAL_COLORS.toList()
                             valueTextColor = AndroidColor.WHITE
@@ -116,7 +115,7 @@ fun ReportScreen(
                 )
             }
 
-            // 📈 Bar Chart
+            Text("Category Trend", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -130,7 +129,7 @@ fun ReportScreen(
                             description.isEnabled = false
                             setDrawValueAboveBar(true)
                             axisRight.isEnabled = false
-                            xAxis.isEnabled = false
+                            xAxis.isEnabled = true
                             legend.isEnabled = false
                             axisLeft.textColor = AndroidColor.WHITE
                         }
@@ -156,7 +155,44 @@ fun ReportScreen(
                 )
             }
 
-            // 💡 Tip
+            Text("Spending Over Time", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+            ) {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { ctx ->
+                        BarChart(ctx).apply {
+                            description.isEnabled = false
+                            axisRight.isEnabled = false
+                            axisLeft.textColor = AndroidColor.WHITE
+                            xAxis.textColor = AndroidColor.WHITE
+                            legend.isEnabled = false
+                        }
+                    },
+                    update = { chart ->
+                        val entries = dailyTrend.entries.mapIndexed { idx, (date, sum) ->
+                            BarEntry(idx.toFloat(), sum.toFloat())
+                        }
+                        val set = BarDataSet(entries, "").apply {
+                            colors = ColorTemplate.MATERIAL_COLORS.toList()
+                            valueTextColor = AndroidColor.WHITE
+                            valueTextSize = 12f
+                        }
+                        chart.data = BarData(set).apply { barWidth = 0.5f }
+                        chart.xAxis.apply {
+                            valueFormatter = IndexAxisValueFormatter(dailyTrend.keys.toList())
+                            granularity = 1f
+                            setDrawLabels(true)
+                        }
+                        chart.invalidate()
+                    }
+                )
+            }
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
