@@ -43,6 +43,9 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
     val sdf = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
 
 
+    LaunchedEffect(Unit) {
+        viewModel.fetchDailyAdvice()
+    }
 
 
     val today = sdf.parse(todayDate)
@@ -118,10 +121,11 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Tip: Small savings make a big difference!",
+                            text = "Tip: ${viewModel.dailyAdvice.value}",
                             fontSize = 16.sp,
                             color = Color.White
                         )
+
                     }
                 }
             }
@@ -190,17 +194,19 @@ fun HomeDashboardScreen(navController: NavHostController, viewModel: ExpenseView
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 4.dp)
+                        ,
                     colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
                 ) {
                     Text(
-                        text = "${expense.category} - \$${expense.amount} (${expense.date})",
+                        text = "💰 \$${expense.amount}  📅 ${expense.date}  📂 ${expense.category}",
                         color = Color.White,
                         fontSize = 16.sp,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
             }
+
             item {
                 Text(
                     text = if (showAllRecent) "Show Less ▲" else "Show All ▼",

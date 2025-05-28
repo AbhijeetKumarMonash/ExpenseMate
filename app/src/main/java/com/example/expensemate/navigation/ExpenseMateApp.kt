@@ -35,6 +35,7 @@ fun ExpenseMateApp(viewModel: ExpenseViewModel) {
             composable("chatbot") { ChatbotScreen(navController) }
             composable("signup") { SignupScreen(navController) }
             composable("profile") { ProfileScreen(navController) }
+
         }
     }
 }

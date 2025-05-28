@@ -10,5 +10,6 @@ data class Expense(
     val category: String = "",
     val date: String = "",
     val userId: String = "",
-    val firestoreId: String = ""
+    val firestoreId: String = "",
+
 )

@@ -1,8 +1,11 @@
 package com.example.expensemate.screens
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.provider.CalendarContract
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.expensemate.CalendarUtils
 import com.example.expensemate.data.Expense
 import java.util.*
 import com.example.expensemate.viewmodel.ExpenseViewModel
@@ -46,9 +50,37 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
     var editingExpenseId by remember { mutableStateOf<Int?>(null) }
     val userId = FirebaseAuth.getInstance().currentUser?.uid
     var editingFirestoreId by remember { mutableStateOf<String?>(null) }
-
-
     val context = LocalContext.current
+    val permissionGranted = remember { mutableStateOf(false) }
+    var pendingExpense by remember { mutableStateOf<Expense?>(null) }
+
+
+
+    val calendarPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted =
+            permissions[android.Manifest.permission.WRITE_CALENDAR] == true &&
+                    permissions[android.Manifest.permission.READ_CALENDAR] == true
+
+        permissionGranted.value = granted
+
+        if (granted && pendingExpense != null && addToCalendar) {
+            val expense = pendingExpense!!
+            CalendarUtils.addEventToCalendar(
+                context = context,
+                title = "Upcoming Expense: ${expense.category}",
+                description = "You have a bill of \$${expense.amount} due.",
+                date = expense.date
+            )
+            pendingExpense = null
+        }
+    }
+
+
+
+
+
     val expenses by viewModel.expenses.collectAsState()
     val categories = listOf("Food", "Transport", "Bills", "Shopping", "Others")
 
@@ -176,33 +208,71 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+
+
+                Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = { galleryLauncher.launch("image/*") },
+                    onClick = {
+                        val category = if (selectedCategory == "Others") otherCategoryName else selectedCategory
+                        if (amount.isNotEmpty() && category.isNotEmpty() && selectedDate.isNotEmpty()) {
+                            val expense = Expense(
+                                id = editingExpenseId ?: 0,
+                                amount = amount.toDouble(),
+                                category = category,
+                                date = selectedDate,
+                                userId = userId ?: "",
+                                firestoreId = editingFirestoreId ?: ""
+                            )
+
+                            // Save expense first
+                            if (editingExpenseId != null) {
+                                viewModel.updateExpense(expense)
+                                editingExpenseId = null
+                                editingFirestoreId = null
+                            } else {
+                                viewModel.addExpense(expense)
+                            }
+
+                            // Launch calendar intent
+                            val parts = selectedDate.split("/")
+                            if (parts.size == 3) {
+                                val day = parts[0].toInt()
+                                val month = parts[1].toInt() - 1
+                                val year = parts[2].toInt()
+
+                                val startMillis = Calendar.getInstance().apply {
+                                    set(year, month, day, 9, 0)
+                                }.timeInMillis
+
+                                val intent = Intent(Intent.ACTION_INSERT).apply {
+                                    data = CalendarContract.Events.CONTENT_URI
+                                    putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startMillis)
+                                    putExtra(CalendarContract.EXTRA_EVENT_END_TIME, startMillis + 60 * 60 * 1000)
+                                    putExtra(CalendarContract.Events.TITLE, "Expense: $category")
+                                    putExtra(CalendarContract.Events.DESCRIPTION, "Bill of $$amount due")
+                                    putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_BUSY)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+
+                                context.startActivity(Intent.createChooser(intent, "Add to Calendar"))
+
+                                // Reset fields (optional, or delay until returning from intent)
+                                amount = ""
+                                selectedCategory = "Select Category"
+                                otherCategoryName = ""
+                                selectedDate = ""
+
+                                Toast.makeText(context, "Saved & opened calendar", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    ,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700), contentColor = Color.Black)
                 ) {
-                    Text("Upload Bill Image")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                billImageUri?.let { uri ->
-                    val inputStream = context.contentResolver.openInputStream(uri)
-                    val bitmap = BitmapFactory.decodeStream(inputStream)
-                    bitmap?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = "Bill Image",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.height(150.dp).fillMaxWidth()
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text("Add to Calendar?", color = Color.White, modifier = Modifier.weight(1f))
-                    Switch(checked = addToCalendar, onCheckedChange = { addToCalendar = it })
+                    Text("📅 Add to Google Calendar")
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -226,10 +296,12 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
                             } else {
                                 viewModel.addExpense(expense)
                             }
+
                             amount = ""
                             selectedCategory = "Select Category"
                             otherCategoryName = ""
                             selectedDate = ""
+
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -237,7 +309,21 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
                 ) {
                     Text("Save Expense", fontWeight = FontWeight.Bold)
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+//                Spacer(modifier = Modifier.height(24.dp))
+
+            }
+
+
+
+
+            item {
+                Text(
+                    "Recent Expenses:",
+                    color = Color(0xFFFFD700),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
             item {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -246,22 +332,11 @@ fun AddExpenseScreen(navController: NavHostController, viewModel: ExpenseViewMod
                         viewModel.syncFromFirestore(userId)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF32CD32), contentColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700), contentColor = Color.Black)
                 ) {
                     Text("🔄 Sync from Cloud")
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-            }
-
-
-            item {
-                Text(
-                    "Your Expenses:",
-                    color = Color(0xFFFFD700),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
             }
 
             items(expenses) { exp ->

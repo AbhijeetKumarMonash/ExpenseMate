@@ -2,8 +2,10 @@ package com.example.expensemate.viewmodel
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.expensemate.RetrofitClient
 import com.example.expensemate.data.Expense
 import com.example.expensemate.data.ExpenseDatabase
 import com.google.firebase.auth.FirebaseAuth
@@ -11,6 +13,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import androidx.compose.runtime.State
 
 
 class ExpenseViewModel(application: Application) : AndroidViewModel(application) {
@@ -26,6 +29,20 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
             Log.d("ExpenseViewModel", "Auth state changed. UID: $uid")
             _userId.value = uid
             syncFromFirestore(uid)
+        }
+    }
+    // In ExpenseViewModel.kt
+    private val _dailyAdvice = mutableStateOf("Loading tip...")
+    val dailyAdvice: State<String> = _dailyAdvice
+
+    fun fetchDailyAdvice() {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.api.getAdvice()
+                _dailyAdvice.value = response.slip.advice
+            } catch (e: Exception) {
+                _dailyAdvice.value = "Couldn't load tip today!"
+            }
         }
     }
 
